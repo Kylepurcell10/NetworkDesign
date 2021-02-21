@@ -5,28 +5,30 @@ IP     = "127.0.0.1"
 #Local Port for client and server
 Port   = 20001
 #buffer to receive information from client
-bufferSize  = 2048
-#user defined sentence to send to the client
-message = input("Enter Message to send to client: ")
-#after the message is defined, it is encoded
-modifiedmessage = message.encode("utf8")
-
+bufferSize  = 1024
 # Create the actual UDP socket for the server
-ServerSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
+ServerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 # Bind the socket to the local IP address and port
 ServerSocket.bind((IP, Port))
+# Server waits listens for clients with a maximum of 5 supported clients
+ServerSocket.listen(5)
 
-# While loop to look for incoming data from the client and also send the message to the client
-while(True):
+# File to be sent over the network, this can be changed to any of the .bmp files that are included
+filename = 'Trash.bmp'
+# Open the file and begin reading it with packet size of 1024
+file = open(filename , 'rb')
+dataStream = file.read(bufferSize)
 
-# Server Receives the address of the client as well as an encoded message
-    ClientData = ServerSocket.recvfrom(bufferSize)
-    ClientMessage = ClientData[0]
-    ClientAddress = ClientData[1]
+# Gather the client information and print where it is going
+ClientSocket , ClientAddress = ServerSocket.accept()
+print("Client Address is :" , ClientSocket , "Client Port is:", ClientAddress)
 
-# Server takes the compiled message and decodes it along with printing the address of the client
-    print("The Message from the Client is: ", ClientMessage.decode("utf8","strict"))
-    print("the Clients IP address and Port number are: ", ClientAddress)
- # Server sends a message to the client.
-    ServerSocket.sendto(modifiedmessage, ClientAddress)
+# Get a packet, and send it to the client, then gather a new one. Do this until there are no more packets available
+while(dataStream):
+    ClientSocket.send(dataStream)
+    dataStream = file.read(bufferSize)
+
+# Ackowledge that the data has been sent and close the socket and file
+print("sent the data")
+file.close()    
+ServerSocket.close()

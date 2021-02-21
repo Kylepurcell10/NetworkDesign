@@ -1,23 +1,25 @@
 import socket
 
-# Message to send to the server from the client is defined by user input
-message      = input("Enter Message to send to Server: ")
-# The message is then encoded
-modifiedMessage     = message.encode("utf8")
 # IP addresss and local port that will be used for communications
 IPaddress           = "127.0.0.1"
 Port                = 20001
-# Maximum size of data that can be stored from message passing
-bufferSize          = 2048
-
 # Creating the UDP clinet socket
-ClientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+ClientSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+ClientSocket.connect((IPaddress, Port))
 
-# Sending the encoded message to the server
-ClientSocket.sendto(modifiedMessage, (IPaddress , Port))
-# Receiving the message from the Server
-ServerMessage = ClientSocket.recvfrom(bufferSize)
-# Concatonating the server message and an introduction phrase
-finalizedMessage = "The Message from the Server is: " + ServerMessage[0].decode("utf8","strict")
-# Printing the phrase
-print(finalizedMessage)
+# Maximum size of data that can be stored from message passing
+bufferSize          = 1024
+# Open the file that is going to be edited
+fileToReceive = open('receive.bmp' , 'wb')
+#receive the first packet and set that as the current stream of packets
+dataStream = ClientSocket.recv(bufferSize)
+
+#while packets are coming in, write them to the file and then gather a new packet
+while(dataStream):
+    fileToReceive.write((dataStream))
+    dataStream = ClientSocket.recv(bufferSize)
+
+#ackowledge that all the data has been received, close both the socket and the file.
+print("received the data")
+fileToReceive.close()
+ClientSocket.close
