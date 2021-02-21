@@ -1,6 +1,6 @@
 import socket 
 
-BUFFER_SIZE = 4096
+BUFFER_SIZE = 1024
 UDP_Port = 26411 #Port # used, in this case, my old student ID# was used
 UDP_Address = '127.0.0.1' #IP address used, in this case the local host IP address was used
 
@@ -16,8 +16,7 @@ print('Reading file into byte array')
 with open('trash-bin-symbol.bmp', 'rb') as f:
         print('File read')
         byte = f.read()
-        while True: 
-            clientSocket.sendto(byte, (UDP_Address, UDP_Port))
+        clientSocket.sendto(byte, (UDP_Address, UDP_Port))
 data, addr = clientSocket.recvfrom(BUFFER_SIZE)
 print(str(data))
 #Sends the aformaentioned message to the IP and port #, this has to be encoded into utf-8 as it cannot be sent as is  
