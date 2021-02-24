@@ -14,7 +14,7 @@ ServerSocket.bind((IP, Port))
 ServerSocket.listen(5)
 
 # File to be sent over the network, this can be changed to any of the .bmp files that are included
-filename = 'Trash.bmp'
+filename = 'Cat.bmp'
 # Open the file and begin reading it with packet size of 1024
 file = open(filename , 'rb')
 dataStream = file.read(bufferSize)
