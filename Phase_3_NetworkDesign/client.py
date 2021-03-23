@@ -1,0 +1,142 @@
+import socket
+import binascii
+import struct
+import sys
+import hashlib
+import base64
+import time
+
+#IP Address for local communications
+IP = "127.0.0.1"
+#Local Port for client and server
+Port = 20001
+#buffer to receive information from client
+bufferSize  = 1024
+
+# Integer, Integer, 8 letter char array, 32 letter char array
+unpacker = struct.Struct('I I 8s 32s')
+
+# Create the actual UDP socket for the server
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+# packet sequence
+currentSequence = 0
+# packet acknowledgement
+currentACK = 0
+# current data item being processed
+data = ""
+
+print("UDP target IP:", IP)
+print("UDP target port:", Port)
+
+
+def rdtSend(dataObject):
+    global currentSequence, currentACK
+
+    # Create the Checksum
+    values = (currentACK, currentSequence, base64.b64encode(dataObject.encode('utf-8')))
+    UDPData = struct.Struct('I I 8s')
+    packedData = UDPData.pack(*values)
+    checksumVal = hashlib.md5(packedData).hexdigest().encode('utf-8')
+    # gets the constructed UDP packet
+    sendPacket = makepacket(currentACK, dataObject, checksumVal)
+    # send the UDP packet
+    UDPSend(sendPacket)
+
+def makeChecksum(ACK, SEQ, DATA):
+    values = (ACK, SEQ, DATA)
+    packer = struct.Struct('I I 8s')
+    packedData = packer.pack(*values)
+    checksum = hashlib.md5(packedData).hexdigest().encode('utf-8')
+    return checksum
+
+# Make_packet function 
+def makepacket(currentACK, data, checksumVal):
+    global currentSequence
+
+    # Build the UDP Packet
+    values = (currentACK, currentSequence, base64.b64encode(data.encode('utf-8')), checksumVal)
+    packetData = struct.Struct('I I 8s 32s')
+    packet = packetData.pack(*values)
+    return packet
+
+def UDPSend(sendPacket):
+    print('Packet sent: ', sendPacket)
+    # Send the UDP Packet to the server
+    sock.sendto(sendPacket, (IP, Port))
+
+
+
+def dataError(receivePacket):
+    # Calculate new checksum of the  [ ACK, SEQ, DATA ]
+    checksum = makeChecksum(receivePacket[0], receivePacket[1], receivePacket[2])
+    # Compare calculated chechsum with checksum value in packet
+    if receivePacket[3] == checksum:
+        print('CheckSums is OK')
+        return False
+    else:
+        print('CheckSums Do Not Match')
+        return True
+
+
+
+def isACK(receivePacket, ACKVal):
+    global currentSequence, currentACK
+    
+    # checks ACK is of value ACKVal
+    if receivePacket[0] == ACKVal and receivePacket[1] == currentSequence:
+        return True
+    else:
+        return False
+
+
+def rdtReceive(receivePacket):
+    global currentACK
+    global currentSequence
+    global dataObject
+
+    # if the packet does not have an error and is acknowledged, then adjust variables for next packet
+    # otherwise resend packet
+    if not dataError(receivePacket) and isACK(receivePacket, currentACK + 1):
+        # Return TRUE for Client to send next packet
+        currentSequence = (currentSequence + 1) % 2
+        return True
+    else:
+        # packet error or no acknowledgement, resend the previous packet
+        print('Invalid packet: ', receivePacket)
+        rdtSend(dataObject)
+        return False
+
+
+
+dataList = ['trashbin.jpg',"1111111", "Message"]
+#This list can be changed to anything else
+#In this case the JPEG image is used along with some arbitrary messages
+
+# send the data items in data list consequetively
+for dataObject in dataList:
+    success = False
+
+    # send the data item until both sequences have been acknowledged by the server (success == True)
+    while success == False:
+        # send the data item
+        sock.settimeout(0)
+        rdtSend('b' + dataObject)
+        print('Data sent: ', dataObject)
+
+        # Receive Data
+        # sets the timeout duration for the packet listening function socket::recvfrom(...) at 9ms
+        sock.settimeout(0.009)
+        try:
+            packet, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
+        except socket.timeout:
+            print('Packet timed out! Resending packet...\n\n')
+            continue
+
+        receivePacket = unpacker.unpack(packet)
+        print("Received from: ", addr)
+        print("Received message: ", receivePacket)
+        success = rdtReceive(receivePacket)
+
+        if success:
+            print('rdt2.2 UDP Packet communication successful\n')
