@@ -23,8 +23,12 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 currentSequence = 0
 # packet acknowledgement
 currentACK = 0
+# File to be sent over the network, this can be changed to any of the .bmp files that are included
+filename = '/src/Projects/Network Design/Network Design Phases/NetworkDesign/Phase_3_NetworkDesign\trashbin.jpg'
+# Open the file and begin reading it with packet size of 1024
+file = open(filename , 'rb')
 # current data item being processed
-data = ""
+data = file.read(bufferSize)
 
 print("UDP target IP:", IP)
 print("UDP target port:", Port)
