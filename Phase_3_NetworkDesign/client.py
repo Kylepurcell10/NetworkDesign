@@ -113,7 +113,7 @@ def rdtReceive(receivePacket):
 
 
 dataList = ['trashbin.jpg']
-#This list can be changed to anything else
+#This list of the data being transferred
 #In this case the JPEG image is used 
 
 # send the data items in data list consequetively
