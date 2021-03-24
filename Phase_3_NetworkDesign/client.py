@@ -108,10 +108,9 @@ def rdtReceive(receivePacket):
         return False
 
 
-
-dataList = ['trashbin.jpg',"1111111", "Message"]
+dataList = ['trashbin.jpg']
 #This list can be changed to anything else
-#In this case the JPEG image is used along with some arbitrary messages
+#In this case the JPEG image is used 
 
 # send the data items in data list consequetively
 for dataObject in dataList:
@@ -120,15 +119,12 @@ for dataObject in dataList:
     # send the data item until both sequences have been acknowledged by the server (success == True)
     while success == False:
         # send the data item
-        sock.settimeout(0)
         rdtSend('b' + dataObject)
         print('Data sent: ', dataObject)
 
         # Receive Data
-        # sets the timeout duration for the packet listening function socket::recvfrom(...) at 9ms
-        sock.settimeout(0.009)
         try:
-            packet, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
+            packet, addr = sock.recvfrom(bufferSize) 
         except socket.timeout:
             print('Packet timed out! Resending packet...\n\n')
             continue
