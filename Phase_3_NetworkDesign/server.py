@@ -21,7 +21,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Bind the socket to the local IP address and port 
 sock.bind((IP, Port))
 
-
+#Function used to make the packet for the client
 def makepacket(currentACK, currentSequence, data, checksumVal):
     # Build the UDP Packet
     values = (currentACK, currentSequence, data, checksumVal)
@@ -29,7 +29,7 @@ def makepacket(currentACK, currentSequence, data, checksumVal):
     packet = packetData.pack(*values)
     return packet
 
-
+#Function used to make the checksum
 def makeChecksum(ACK, SEQ, DATA):
     values = (ACK, SEQ, DATA)
     packer = struct.Struct('I I 8s')
@@ -37,6 +37,7 @@ def makeChecksum(ACK, SEQ, DATA):
     checksum = hashlib.md5(packedData).hexdigest().encode('utf-8')
     return checksum
 
+#Function that checks the packet for corruption
 def dataError(receivePacket):
     # Calculate new checksum of the  [ ACK, SEQ, DATA ]
     checksum = makeChecksum(receivePacket[0], receivePacket[1], receivePacket[2])
@@ -48,20 +49,19 @@ def dataError(receivePacket):
         print('CheckSums Do Not Match')
         return True
 
-
+#Where the previous functions are used to send the packets back to the client
 while True:
     print("Listening")
-    # Receive Data
+    #Where the data is received
     data, addr = sock.recvfrom(bufferSize) 
     packet = unpacker.unpack(data)
     print("Received from:", addr)
     print("Received message:", packet)
 
-    # Compare Checksums to test for error in data
+    #This compares checksums to see if there are errors
     if not dataError(packet):
         print('CheckSums Matches, Packets are ok')
 
-        # Built checksum [ACK, SEQ, DATA]
         ACK = packet[0] + 1
         SEQ = packet[1]
         DATA = b''
@@ -71,18 +71,15 @@ while True:
         packet = makepacket(packet[0] + 1, packet[1], b'', checksumVal)
         print('Packeting')
 
-        # Send the UDP Packet
         sock.sendto(packet, addr)
         print('Sent')
     else:
         print('Checksums Do Not Match, Packet error')
 
-        # Built checksum [ACK, SEQ, DATA]
         checksumVal = makeChecksum(packet[0] + 1, (packet[1] + 1) % 2, b'')
 
         packet = makepacket(packet[0] + 1, (packet[1] + 1) % 2, b'', checksumVal)
         print('Packeting')
 
-        # Send the UDP Packet
         sock.sendto(packet, addr)
         print('Sent')
