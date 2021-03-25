@@ -18,7 +18,7 @@ bufferSize  = 1024
 unpacker = struct.Struct('I I 8s 32s')
 
 # Create the actual UDP socket for the server
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 print("UDP IP:", IP)
 print("UDP port:", Port)
@@ -76,10 +76,8 @@ def isACK(receivePacket, ACKVal):
     else:
         return False
 
-
-
-currentSequence = 0;
-currentACK = 0;
+currentSequence = 0
+currentACK = 0
 
 # Open the file and begin reading it with packet size of 1024
 file = open('Cat.bmp' , 'rb')
@@ -99,9 +97,9 @@ while (data):
     receivePacket = unpacker.unpack(packet)
 
     if( dataError(receivePacket) == False and isACK(receivePacket , currentACK) == True):
-        currentACK + 1;
-        currentSequence  = (currentSequence + 1) % 2;
-        data = file.read(bufferSize);
+        currentACK + 1
+        currentSequence  = (currentSequence + 1) % 2
+        data = file.read(bufferSize)
 
 
 file.close()
