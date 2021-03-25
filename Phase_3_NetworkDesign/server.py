@@ -60,7 +60,7 @@ while True:
 
     #This compares checksums to see if there are errors
     if not dataError(packet):
-        print('CheckSums Matches, Packets are ok')
+        print('CheckSums Matches, Packets are Ok')
 
         ACK = packet[0] + 1
         SEQ = packet[1]
