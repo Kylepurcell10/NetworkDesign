@@ -50,18 +50,18 @@ def dataError(receivePacket):
 
 dataFile = open('receive.bmp' , 'wb')
 print("Listening")
-currentAck = 0;
+currentAck = 0
 data, addr = sock.recvfrom(bufferSize) 
 
 while (data):
 
     packet = unpacker.unpack(data)
     print("Received from:", addr)
-    print(packet);
+    print(packet)
 
     # Compare Checksums to test for error in data
     if not dataError(packet):
-        dataFile.write(data);
+        dataFile.write(data)
 
         # Built checksum [ACK, SEQ, DATA]
         ACK = packet[0] + 1
