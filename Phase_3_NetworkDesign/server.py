@@ -53,7 +53,7 @@ def dataError(receivePacket):
 while True:
     print("Listening")
     #Where the data is received
-    data, addr = sock.recvfrom(bufferSize) 
+    data, addr = serverSocket.recvfrom(bufferSize) 
     packet = unpacker.unpack(data)
     print("Received from:", addr)
     print("Received message:", packet)
@@ -71,7 +71,7 @@ while True:
         packet = makepacket(packet[0] + 1, packet[1], b'', checksumVal)
         print('Packeting')
 
-        sock.sendto(packet, addr)
+        serverSocket.sendto(packet, addr)
         print('Sent')
     else:
         print('Checksums Do Not Match, Packet error')
@@ -81,5 +81,5 @@ while True:
         packet = makepacket(packet[0] + 1, (packet[1] + 1) % 2, b'', checksumVal)
         print('Packeting')
 
-        sock.sendto(packet, addr)
+        serverSocket.sendto(packet, addr)
         print('Sent')
