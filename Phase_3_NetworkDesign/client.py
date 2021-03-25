@@ -17,7 +17,7 @@ bufferSize  = 1024
 unpacker = struct.Struct('I I 8s 32s')
 
 # Create the actual UDP socket for the server
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+clientSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 # packet sequence
 currentSequence = 0
@@ -68,7 +68,7 @@ def makepacket(currentACK, data, checksumVal):
 #Function to send the UDP Packet to the server
 def UDPSend(sendPacket):
     print('Packet sent: ', sendPacket)
-    sock.sendto(sendPacket, (IP, Port))
+    clientSocket.sendto(sendPacket, (IP, Port))
 
 
 #Function that checks the packet for corruption
@@ -127,7 +127,7 @@ for data in dataList:
 
         #Executes when a packet has timed out and starts resending if so
         try:
-            packet, addr = sock.recvfrom(bufferSize) 
+            packet, addr = clientSocket.recvfrom(bufferSize) 
         except socket.timeout:
             print('Packet timed out! Resending packet...\n\n')
             continue

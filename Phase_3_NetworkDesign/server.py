@@ -17,9 +17,9 @@ bufferSize  = 1024
 unpacker = struct.Struct('I I 8s 32s')
 
 # Create the actual UDP socket for the server
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
+serverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
 # Bind the socket to the local IP address and port 
-sock.bind((IP, Port))
+serverSocket.bind((IP, Port))
 
 #Function used to make the packet for the client
 def makepacket(currentACK, currentSequence, data, checksumVal):
