@@ -82,7 +82,7 @@ currentSequence = 0;
 currentACK = 0;
 
 # Open the file and begin reading it with packet size of 1024
-file = open('Cat.bmp' , 'rb')
+file = open('Cat.jpg' , 'rb')
 # current data item being processed
 data = file.read(bufferSize)
 
