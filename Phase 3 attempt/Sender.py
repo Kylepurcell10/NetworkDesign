@@ -97,9 +97,9 @@ while (data):
     receivePacket = unpacker.unpack(packet)
 
     if( dataError(receivePacket) == False and isACK(receivePacket ,  + 1) == True):
-        currentAck = currentACK + 1;
-        currentSequence  = (currentSequence + 1) % 2;
-        data = file.read(bufferSize);
+        currentAck = currentACK + 1
+        currentSequence  = (currentSequence + 1) % 2
+        data = file.read(bufferSize)
 
 
 file.close()
