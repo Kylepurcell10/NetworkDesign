@@ -71,7 +71,7 @@ def makeChecksum(ACK, SEQ, DATA):
 def isACK(receivePacket, ACKVal):
     
     # checks ACK is of value ACKVal
-    if receivePacket[0] == ACKVal and receivePacket[1] == currentSequence:
+    if (receivePacket[0] == ACKVal and receivePacket[1] == currentSequence):
         return True
     else:
         return False
@@ -96,10 +96,10 @@ while (data):
     print("Received from: ", addr) 
     receivePacket = unpacker.unpack(packet)
 
-    if( dataError(receivePacket) == False and isACK(receivePacket , currentACK) == True):
-        currentACK + 1
-        currentSequence  = (currentSequence + 1) % 2
-        data = file.read(bufferSize)
+    if( dataError(receivePacket) == False and isACK(receivePacket ,  + 1) == True):
+        currentAck = currentACK + 1;
+        currentSequence  = (currentSequence + 1) % 2;
+        data = file.read(bufferSize);
 
 
 file.close()
