@@ -64,13 +64,13 @@ while (data):
         dataFile.write(data);
 
         # Built checksum [ACK, SEQ, DATA]
-        ACK = packet[0]
+        ACK = packet[0] + 1
         SEQ = packet[1]
         DATA = b''
         checksumVal = makeChecksum(ACK, SEQ, DATA)
 
         
-        packet = makepacket(packet[0], packet[1], b'', checksumVal)
+        packet = makepacket(packet[0] + 1, packet[1], b'', checksumVal)
         print('Packeting')
 
         # Send the UDP Packet
