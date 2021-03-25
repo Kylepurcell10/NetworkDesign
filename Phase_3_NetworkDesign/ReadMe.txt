@@ -11,7 +11,7 @@ Instructions
 -This code was developed using Visual Studio Code. When opening the files in Visual Studio Code, they will appear in tabs along the top of the IDE. 
 -First, run the “server.py” using the “run without debugging” in the “run” tab at the top of the IDE. 
 -Then you go to the “client.py” tab and “run without debugging” again. 
--You will get a notification in the terminal with the data was sent.
+-You will get a notification in the terminal showing the packets being sent.
 -If it was sucessful, we should end up with a file on the server side.
 -To see the server side, hit the drop-down menu where it says “2. Python Debug console” and go to “1. Python Debug console”. 
 -There the both the client's address and port number will be printed out along with the notification saying that the checksums and packets are ok.
