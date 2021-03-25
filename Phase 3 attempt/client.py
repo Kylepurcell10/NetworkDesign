@@ -18,38 +18,38 @@ bufferSize  = 1024
 unpacker = struct.Struct('I I 8s 32s')
 
 # Create the actual UDP socket for the server
-socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+senderSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 print("UDP IP:", IP)
 print("UDP port:", Port)
 
+#Function used to implement the rdt send
 def rdtSend(data):
     global currentSequence, currentACK
 
-    # Create the Checksum
+    #Creating the checksum 
     values = (currentACK, currentSequence, data)
     UDPData = struct.Struct('I I 8s')
     packedData = UDPData.pack(*values)
-    #Creates a 32 bit checksum
     checksumVal = hashlib.md5(packedData).hexdigest().encode('utf-8')
-    # gets the constructed UDP packet
+    #This is where it gets the UDP packet
     sendPacket = makepacket(currentACK, data, checksumVal)
-    # send the UDP packet
     UDPSend(sendPacket)
 
-    # Make_packet function 
+#Function used to make the checksum
 def makepacket(currentACK, data, checksumVal):
 
-    # Build the UDP Packet
+    #Creating the checksum 
     values = (currentACK, currentSequence, data, checksumVal)
     packetData = struct.Struct('I I 8s 32s')
     packet = packetData.pack(*values)
     return packet
 
+#Function to send the UDP Packet to the server
 def UDPSend(sendPacket):
-        sock.sendto(sendPacket, (IP, Port))
+        senderSocket.sendto(sendPacket, (IP, Port))
 
-
+#Function that checks the packet for corruption
 def dataError(receivePacket):
     # Calculate new checksum of the  [ ACK, SEQ, DATA ]
     checksum = makeChecksum(receivePacket[0], receivePacket[1], receivePacket[2])
@@ -61,6 +61,7 @@ def dataError(receivePacket):
         print('CheckSums Do Not Match')
         return True
 
+#Function used to make the checksum
 def makeChecksum(ACK, SEQ, DATA):
     values = (ACK, SEQ, DATA)
     packer = struct.Struct('I I 8s')
@@ -68,9 +69,9 @@ def makeChecksum(ACK, SEQ, DATA):
     checksum = hashlib.md5(packedData).hexdigest().encode('utf-8')
     return checksum
 
+#Function to tell if the packet is acknowledged
 def isACK(receivePacket, ACKVal):
     
-    # checks ACK is of value ACKVal
     if (receivePacket[0] == ACKVal and receivePacket[1] == currentSequence):
         return True
     else:
@@ -80,27 +81,28 @@ currentSequence = 0
 currentACK = 0
 
 # Open the file and begin reading it with packet size of 1024
-file = open('Cat.bmp' , 'rb')
+file = open('/src/Projects/Network_Design/Network_Design_Phases/NetworkDesign/Phase 3 attempt/trashbin.jpg' , 'rb')
 # current data item being processed
 data = file.read(bufferSize)
 
+#This will be used to send the data
 while (data):
 
-    # send the data item
+    #This keeps sending data item until both sequences have been acknowledged by the server
     rdtSend(data)
     try:
-        packet, addr = sock.recvfrom(bufferSize)
+        packet, addr = senderSocket.recvfrom(bufferSize)
     except:
         pass
 
     print("Received from: ", addr) 
     receivePacket = unpacker.unpack(packet)
 
-    if( dataError(receivePacket) == False and isACK(receivePacket ,  + 1) == True):
+    if(dataError(receivePacket) == False and isACK(receivePacket ,  + 1) == True):
         currentAck = currentACK + 1
         currentSequence  = (currentSequence + 1) % 2
         data = file.read(bufferSize)
 
 
 file.close()
-sock.close
+senderSocket.close
