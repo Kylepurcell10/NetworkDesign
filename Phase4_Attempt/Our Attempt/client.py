@@ -81,10 +81,10 @@ f = open('/src/Projects/Network_Design/Network_Design_Phases/NetworkDesign/Phase
 fileSize = Functions.fileSize(f)                                   #File size is calculated
 
 loop = Functions.looptimes(fileSize,bufferSize)                    #finding the loop value
-loop_bytes = struct.pack("!I", loop)                                #change loop from integer to byte inorder to send data from client to server
+loopBytes = struct.pack("!I", loop)                                #change loop from integer to byte inorder to send data from client to server
 print("File has been Extracted \nFile size: {0} \nNo. of Loops to send the entire file: {1}".format(fileSize,loop))
 sendSeqNum = 0                                                        #Sequence Number is set to 0 initially
-sendSeqNum = rdtSend(clientSocket,addr,sendSeqNum,loop_bytes)   #sending the file size to Server
+sendSeqNum = rdtSend(clientSocket,addr,sendSeqNum,loopBytes)   #sending the file size to Server
 
 
 print('Client File Transfer Starts...')
