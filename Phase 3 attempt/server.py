@@ -19,8 +19,7 @@ unpacker = struct.Struct('I I 8s 32s')
 
 # Create the actual UDP socket for the server
 receiverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
-# Bind the socket to the local IP address and port 
-receiverSocket.bind((IP, Port))
+receiverSocket.bine((IP , Port))
 
 #Function used to implement the rdt send
 def rdtSend(currentSequence , currentAck , data):
@@ -91,10 +90,7 @@ while True:
         print('Sent')
         currentACK = currentACK + 1
         currentSequence = (currentSequence + 1) % 2
-        packet, addr = receiverSocket.recvfrom(bufferSize)
-        receivedPacket = unpacker.unpack(packet)
         
-
     else:
         print('Packet error')
         checksumVal = makeChecksum(packet[0] + 1, (packet[1] + 1) % 2, b'')
@@ -102,8 +98,10 @@ while True:
         print('Packeting')
         receiverSocket.sendto(packet, addr)
         print('Sent')
-        packet, addr = receiverSocket.recvfrom(bufferSize) 
-        receivedPacket = unpacker.unpack(packet)
+
+sleep(10)
+packet, addr = receiverSocket.recvfrom(bufferSize)
+receivedPacket = unpacker.unpack(packet)
 
 dataFile.close()
 receiverSocket.close
