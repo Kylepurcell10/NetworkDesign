@@ -13,9 +13,9 @@ bufferSize = 1024                     #bufferSize is set to 1024. packet size is
 addr = (IP,Port)
 
 #Function used to implement the rdt send
-def rdtSendPacket(clientSocket,addr,sendSeqNum,data,packetErrorProbability=0,packetDropProbability=0):
+def rdtSend(clientSocket,addr,sendSeqNum,data,packetErrorProbability = 0,packetDropProbability = 0):
     successfulSend = 0                                                                     #send_sucessful is set to '0' initially
-    packet = Functions.makePacket(sendSeqNum,Functions.checksum(data),data)                      #Packet is created with the sequence number,checksum,data
+    packet = Functions.makePacket(sendSeqNum,Functions.makeChecksum(data),data)                      #Packet is created with the sequence number,checksum,data
 
     while (not(successfulSend)):                                                           #loop goes on until condition becomes 'false'
 
@@ -40,11 +40,11 @@ def rdtSendPacket(clientSocket,addr,sendSeqNum,data,packetErrorProbability=0,pac
                 packetSeqNum,senderChecksum,ACKData=Functions.extractData(ACKPacket)          #Extracts the sequence number, checksum value, data from a packet
 
                 if (Functions.errorCondition(packetErrorProbability)):                                     #If dataBitError is true, it starts to corrupt data intentionally
-                        ACKData = Functions.corruptData(ACKData)                         #Function to corrupt data
+                        ACKData = Functions.dataError(ACKData)                         #Function to corrupt data
                         print ("ACK Corrupted.")
 
                 refrenceAck ="ACK"+str(sendSeqNum)                                            #This is the referenced Acknowledgement with respect to the sequence number. (string "ACK" also added to the sequence number for user convention and to avoid confusion)
-                ACKChecksum = Functions.checksum(ACKData)                                 #Finds the checksum for received acknowledgement
+                ACKChecksum = Functions.makeChecksum(ACKData)                                 #Finds the checksum for received acknowledgement
                 ACKData = ACKData.decode("UTF-8")                                         #Decodes from byte to integer for the comparison
 
                 #Comparing Acknowledgement
@@ -84,7 +84,7 @@ loop = Functions.looptimes(fileSize,bufferSize)                    #finding the 
 loop_bytes = struct.pack("!I", loop)                                #change loop from integer to byte inorder to send data from client to server
 print("File has been Extracted \nFile size: {0} \nNo. of Loops to send the entire file: {1}".format(fileSize,loop))
 sendSeqNum = 0                                                        #Sequence Number is set to 0 initially
-sendSeqNum = rdtSendPacket(clientSocket,addr,sendSeqNum,loop_bytes)   #sending the file size to Server
+sendSeqNum = rdtSend(clientSocket,addr,sendSeqNum,loop_bytes)   #sending the file size to Server
 
 
 print('Client File Transfer Starts...')
@@ -95,7 +95,7 @@ for i in range(0,loop):                                             #it runs 'lo
     if(i >= (loop - 2)):                                               #This is used to make sure corruption is not made at last loop, if not client or server keeps on waiting for ack/data.
         packetErrorProbability = 0                                                    #Error probability manually set to zero (No corruption) if true.
         packetDropProbability = 0                                                    #Packet Dropping probability manually set to zero (No corruption) if true.
-    sendSeqNum = rdtSendPacket(clientSocket,addr,sendSeqNum,ImgPkt,packetErrorProbability,packetDropProbability)    #calls the function rdt_send to send the packet
+    sendSeqNum = rdtSend(clientSocket,addr,sendSeqNum,ImgPkt,packetErrorProbability,packetDropProbability)    #calls the function rdt_send to send the packet
     i = i + 1                                                           #Loop iteration
 
 f.close()                                                           #File closed
