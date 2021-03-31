@@ -5,101 +5,149 @@ import struct
 import time
 import Functions
 
-start = time.time()                    #This is used to find the start time of the program, elapsed time can be found by end time - start time
-
-IP = "127.0.0.1"                   #Localhost is the IP address of this machine
-Port = 20001                       #Port Number is assigned to 5005
-bufferSize = 1024                     #bufferSize is set to 1024. packet size is 1024 with sequence number 1 byte, checksum 2 bytes, data 1021 bytes.
+#Local IP to be used in communications
+IP = "127.0.0.1"
+#Using port 20001
+Port = 20001
+#buffer of size 1024
+bufferSize = 1024
+#address is a combination of the IPaddress and the Port number
 addr = (IP,Port)
 
-#Function used to implement the rdt send
+#Function that handles the sending of packets to the server and receiving the ackowledgement data back
 def rdtSend(clientSocket,addr,sendSeqNum,data,packetErrorProbability = 0,packetDropProbability = 0):
-    successfulSend = 0                                                                     #send_sucessful is set to '0' initially
-    packet = Functions.makePacket(sendSeqNum,Functions.makeChecksum(data),data)                      #Packet is created with the sequence number,checksum,data
 
-    while (not(successfulSend)):                                                           #loop goes on until condition becomes 'false'
+    #identifier of if the full process has been completed
+    successfulSend = 0
 
-        clientSocket.sendto(packet,addr)                                                        #sending the packet to server
+    #Make the packet with the correct sequence number, the Checksum , and the first 1024 bits of data from the image
+    packet = Functions.makePacket(sendSeqNum, Functions.makeChecksum(data), data)
+
+    #loop as long as the file has not been successfully sent
+    while (not(successfulSend)):
+
+        #Send the packet
+        clientSocket.sendto(packet,addr)
         print ("Sending the Packet...")
-        startTime = time.time()                                                            #startTime gives the starting time for the timer
 
-        clientSocket.settimeout(0.03)                                                           #UDP Socket timer is added here, In this case 30 milliseconds is set as timer.If timed-out before operation, it goes to the timer exception.
-        try:                                                                                #This is used for timer. if timed-out, it comes out of try loop and goes to exception.
+        #Start the timer for the packet
+        startTime = time.time()
+
+         #Set the timeout value for the socket to be 0.05 seconds
+        clientSocket.settimeout(0.05)
+        try:
+            #Try and gather the data for a packet, otherwise (exception break) there will be a timeout
             print ("Timer Started.")
-            ACKPacket,addr = clientSocket.recvfrom(bufferSize)                                   #Client receiving the Acknowledgement packet
-            clientSocket.settimeout(None)                                                       #It is equivalent to sock.setblocking(0), timer is actived only for receive function which takes care of entire operation according to the FSM.
+            #Get the ackowledgement from the server
+            ACKPacket,addr = clientSocket.recvfrom(bufferSize)
+            #Timer is active only for receive function which takes care of the entire operation
+            clientSocket.settimeout(None)
 
-            if (Functions.errorCondition(packetDropProbability)):                                         #If dataBitError is true, it starts to Drop packet intentionally ! by coming out of while-loop. Basically The received packet not utilised/used.
+            if (Functions.errorCondition(packetDropProbability)):
+                #If dataBitError is true a packet will be dropped at the rate of the variable packetDropProbability
+                # This will force it out of the loop and discard the packet
                 print ("Acknowledgement Packet Dropped")
-                while(time.time() < (startTime + 0.03)):                                   #As per the FSM, We need to time-out. Here we are using while loop. If current-time is less than the timer-time, it runs infinite loop with no operations. After timer-time, condition fails and loop comes out
+                #As per the FSM, We need to time-out. Here we are using while loop. If current-time is less than the timer-time, it runs infinite loop with no operations. After timer-time, condition fails and loop comes out
+                while(time.time() < (startTime + 0.05)):
                             pass
                 print ("Timed Out. \n")
-                successfulSend = 0                                                         #Comes out of current loop and starts again since condition will be while(1).
+                #Comes out of current loop and starts again since condition will be while(1).
+                successfulSend = 0
 
-            else:                                                                           #If dataBitError is False,then it refers to No-packet dropping. It goes to else loop and utilises the received packet.
-                packetSeqNum,senderChecksum,ACKData=Functions.extractData(ACKPacket)          #Extracts the sequence number, checksum value, data from a packet
+            #this statement will execute if a packet was not intentionally dropped
+            else:
+                #get the packets respective sequence number, its checksum, and its ackowledgement
+                packetSeqNum,senderChecksum,ACKData=Functions.extractData(ACKPacket)
 
-                if (Functions.errorCondition(packetErrorProbability)):                                     #If dataBitError is true, it starts to corrupt data intentionally
-                        ACKData = Functions.dataError(ACKData)                         #Function to corrupt data
+                #If there is user predefined data bit errors, the function will modift the ackowledgement.
+                if (Functions.errorCondition(packetErrorProbability)):
+                        #function to actually corrupt the data
+                        ACKData = Functions.dataError(ACKData)
                         print ("ACK Corrupted.")
+                #This statement provides what the ackoledgement should have been so that it can be compared, and the program can figure out the paket needs to be discarded
+                refrenceAck ="ACK"+str(sendSeqNum)
+                #Finds the checksum using the corrupted received acknowledgement
+                ACKChecksum = Functions.makeChecksum(ACKData)
+                #Decodes from byte to integer for the comparison
+                ACKData = ACKData.decode("UTF-8")
 
-                refrenceAck ="ACK"+str(sendSeqNum)                                            #This is the referenced Acknowledgement with respect to the sequence number. (string "ACK" also added to the sequence number for user convention and to avoid confusion)
-                ACKChecksum = Functions.makeChecksum(ACKData)                                 #Finds the checksum for received acknowledgement
-                ACKData = ACKData.decode("UTF-8")                                         #Decodes from byte to integer for the comparison
-
-                #Comparing Acknowledgement
-                if (ACKData != refrenceAck) or (ACKChecksum != senderChecksum ):           #if packet is corrupted or has unexpected acknowledgement it resends the packet
+            #if packet is corrupted or has unexpected acknowledgement it resends the packet
+                if (ACKData != refrenceAck) or (ACKChecksum != senderChecksum ):
                         print ("ACK: {0}, Sequence #: {1}".format(ACKData,sendSeqNum))
                         print("Resending the Packet")
-                        successfulSend = 0                                                 #Loop continues until satisfies condition, Basically resends the packet.
-                        while(time.time() < (startTime + 0.03)):                           #As per the FSM, We need to time-out. Here we are using while loop. If current-time is less than the timer-time, it runs infinite loop with no operations. After timer-time, condition fails and loop comes out
+                        #Loop continues until satisfies condition, Basically resends the packet.
+                        successfulSend = 0
+                        #If the socket takes longer than the allotted timout tiem, it fails and exits the loop
+                        while(time.time() < (startTime + 0.05)):
                             pass
                         print ("Timed Out. \n")
 
-
-                elif (ACKData == refrenceAck) and (ACKChecksum == senderChecksum ):        #if packet is not corrupted and has expected acknowledgement it does nothing. *updates sequence number for next loop
+            #If theres nothing wrong with the packet, print to the screen the ackowledgement and the sequence number, and then update the sequence number
+                elif (ACKData == refrenceAck) and (ACKChecksum == senderChecksum ):
                         print ("ACK: {0}, Sequence #: {1}".format(ACKData,sendSeqNum))
-                        sendSeqNum = 1 - sendSeqNum                                               #updating sequence number
-                        successfulSend = 1                                                 #Comes out of while loop.
+                        #updates sequence number
+                        sendSeqNum = 1 - sendSeqNum
+                        #successful data transfer
+                        successfulSend = 1
                         print ("Timer Stopped.")
 
         except(socket.timeout):
             print ("Timed Out. \n")
-            successfulSend = 0                                                               #Comes out of current loop and starts again since condition will be while(1).
+#Comes out of current loop and starts again since condition will be while(1).
+            successfulSend = 0
+#returns updated sequence number
+    return sendSeqNum
 
-    return sendSeqNum                                                                         #returns updated sequence number
 
+##USER INPUT REQUIRED
 
-#To corrupt data packet, Set value from 0 - 99 in packetErrorProbability
-packetErrorProbability = 0                                                        #packetErrorProbability is the error probability and can be set from 0-99
-packetDropProbability = 0                                                          #packetDropProbability is the packet dropping probability and can be set from 0-99
+#To corrupt data packet, Set one of these value to a number from 0 - 99
+#packetErrorProbability controls the probability of a bit error within X% of packets
+packetErrorProbability = 0
+#packetDropProbability is the probability that a packet is dropped in the data transfer
+packetDropProbability = 0
 
-clientSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)              #Socket with IPV4, UDP
-f = open('/src/Projects/Network_Design/Network_Design_Phases/NetworkDesign/Phase4_Attempt/Our Attempt/Trash.bmp','rb')                                          #opening a new file, this file will be transferred to the server
-#change to abolsute path
+#Create the actual socket itself
+clientSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 
-fileSize = Functions.fileSize(f)                                   #File size is calculated
+#Open the file that is going to be transfered
+fileName = 'Trash.bmp'
+file = open(fileName,'rb')
 
-loop = Functions.looptimes(fileSize,bufferSize)                    #finding the loop value
-loop_bytes = struct.pack("!I", loop)                                #change loop from integer to byte inorder to send data from client to server
+#Calculate the size of the file
+fileSize = Functions.fileSize(file)
+
+#determine how many times a packet will need to be sent in order for the file to be completely transfered
+loop = Functions.looptimes(fileSize,bufferSize)
+
+#change loop from integer to byte in order to send data from client to server
+loop_bytes = struct.pack("!I", loop)
 print("File has been Extracted \nFile size: {0} \nNo. of Loops to send the entire file: {1}".format(fileSize,loop))
-sendSeqNum = 0                                                        #Sequence Number is set to 0 initially
-sendSeqNum = rdtSend(clientSocket,addr,sendSeqNum,loop_bytes)   #sending the file size to Server
+#Sequence Number is set to 0 initially
+sendSeqNum = 0
+#sending the file size to Server
+sendSeqNum = rdtSend(clientSocket, addr, sendSeqNum, loop_bytes)
 
 
 print('Client File Transfer Starts...')
 
-for i in range(0,loop):                                             #it runs 'loop' times
-    print("\nLoop :",i + 1)                                           #Prints the Current loop. For easier way, initial print value starts from 1 (i+1, where i is 0)
-    ImgPkt = f.read(bufferSize - 3)                                  #reading the file, 1021 bytes at a time.
-    if(i >= (loop - 2)):                                               #This is used to make sure corruption is not made at last loop, if not client or server keeps on waiting for ack/data.
-        packetErrorProbability = 0                                                    #Error probability manually set to zero (No corruption) if true.
-        packetDropProbability = 0                                                    #Packet Dropping probability manually set to zero (No corruption) if true.
-    sendSeqNum = rdtSend(clientSocket,addr,sendSeqNum,ImgPkt,packetErrorProbability,packetDropProbability)    #calls the function rdt_send to send the packet
-    i = i + 1                                                           #Loop iteration
+#Program runs the data transfer 'loop' number of times
+for i in range(0,loop):
+    print("\nLoop :",i + 1)
+    #reading the file, 1021 bytes at a time with 1 byte being the sequence number and 2 bytes being the checksum
+    ImgPkt = file.read(bufferSize - 3)
+    #This loop is only here to ensure that corruption doesnt happen on the last two packets otherwise the sockets could fail or stall
+    if(i >= (loop - 2)):
+        #Error probability manually set to zero (No corruption) if true.
+        packetErrorProbability = 0
+        #Packet Dropping probability manually set to zero (No corruption) if true.
+        packetDropProbability = 0
+        #calls the function to send the packet
+    sendSeqNum = rdtSend(clientSocket,addr,sendSeqNum,ImgPkt,packetErrorProbability,packetDropProbability)
+    #Iterate the loop
+    i = i + 1
 
-f.close()                                                           #File closed
-clientSocket.close()                                                        #Socket Closed
-
-end = time.time()                                                   #Gets the End time
-
+#Close the file
+file.close()
+#Close the socket
+clientSocket.close()

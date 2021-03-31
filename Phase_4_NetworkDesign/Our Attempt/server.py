@@ -5,85 +5,132 @@ import struct
 import time
 import Functions
 
-start = time.time()                    #This is used to find the start time of the program, elapsed time can be found by end time - start time
+#Start the timer to see how long the program takes to execute
+start = time.time()
 
-IP = "127.0.0.1"                   #Localhost is the IP address of this machine
-Port = 20001                       #Port Number is assigned to 5005
-bufferSize = 1024                     #bufferSize is set to 1024. packet size is 1024 with sequence number 1 byte, checksum 2 bytes, data 1021 bytes.
+#Local IP to be used in communications
+IP = "127.0.0.1"
+#Using port 20001
+Port = 20001
+#buffer of size 1024
+bufferSize = 1024
+#address is a combination of the IPaddress and the Port number
 addr = (IP,Port)
 
 
 def rdtReceive (serverSocket,bufferSize,receiveSeqNum,packetErrorProbability = 0,packetDropProbability = 0):
-    successfulReceive = 0                                                                  #Receive_sucessful is set to '0' initially
-    while (not(successfulReceive)):                                                        #loop goes on until condition becomes 'false'
+    #this will be the loop identifier, determines if the transfer is complete and if the loop will end
+    successfulReceive = 0
+    while (not(successfulReceive)):
 
-        data, address = serverSocket.recvfrom(bufferSize)                                          #Packet is received from client
+        #Receive the packet from the client
+        data, address = serverSocket.recvfrom(bufferSize)
 
-        if (Functions.errorCondition(packetDropProbability)):                                             #If dataBitError is true, it starts to Drop packet intentionally ! by coming out of while-loop. Basically The received packet not utilised/used.
+    #If the probability of dropping a packet causes this If statement to render "true" then the packet will be discarded and will exit the loop
+        if (Functions.errorCondition(packetDropProbability)):
           print ("Data Packet Dropped\n")
-          successfulReceive = 0                                                              #Comes out of current loop and starts again since condition will be while(1).
+          #Restarts the loop by recieving The correct data from the server
+          successfulReceive = 0
 
-        else:                                                                               #If dataBitError is False,then it refers to No-packet dropping. It goes to else loop and utilises the received packet.
-            seqNum,makeChecksum,imagePacket=Functions.extractData(data)                            #Extracts the sequence number, checksum value, data from a packet
+    #This else statement will execute in all circumstances where the packet is not dropped
+        else:
+            #Extracts the sequence number, the checksum , and the image packet
+            seqNum, makeChecksum, imagePacket = Functions.extractData(data)
 
-            if (Functions.errorCondition(packetErrorProbability)):                                         #If dataBitError is true, it starts to corrupt packet intentionally
-                imagePacket = Functions.dataError(imagePacket)                                   #Function to corrupt data
+    #This statement will be true if the manually selected packet Error probability renders the statement true, then the actual image packet will be manually corrupted
+    #using the dataError(packet) function
+            if (Functions.errorCondition(packetErrorProbability)):
+                #The actual corruption of data
+                imagePacket = Functions.dataError(imagePacket)
                 print ("\nData Corrupted")
 
 
-            receiverChecksum = Functions.makeChecksum(imagePacket)                                       #Receiver Checksum in integer
+            #determine the checksum from the packet that was sent
+            receiverChecksum = Functions.makeChecksum(imagePacket)
 
-            if ((receiverChecksum == makeChecksum) and (seqNum == receiveSeqNum)):                     #if packet is not corrupted and has expected sequence number, sends Acknowledgement with sequence number  *updates sequence number for next loop
-                    Ack = receiveSeqNum                                                        #sends sequence number
-                    Ack = b'ACK' + str(Ack).encode("UTF-8")                                 #Converting (Ack) from int to string and then encoding to bytes
-                    senderACK = Functions.makePacket(seqNum,Functions.makeChecksum(Ack),Ack)     #Server sends Ack with Seq_num, checksum, Ack
+        #if the packet has a matching checksum and sequence number, assign the corresponding ACK, create the checksum, and then send the repsonse to the client
+            if ((receiverChecksum == makeChecksum) and (seqNum == receiveSeqNum)):
+                #identify the ackowledgement
+                    Ack = receiveSeqNum
+                    #Convert the Ack from int to string and then encoding to bytes
+                    Ack = b'ACK' + str(Ack).encode("UTF-8")
+                    #Server sends the sequence number, the checksum, and the ackowledgement back to the client
+                    senderACK = Functions.makePacket(seqNum,Functions.makeChecksum(Ack),Ack)
                     print("Sequence #: {0}, Receiver Sequence: {1}, Checksum from Client: {2}, Checksum for Received File: {3}\n".format(seqNum,receiveSeqNum,makeChecksum,receiverChecksum))
-                    receiveSeqNum = 1 - seqNum                                                  #update sequence number to the next expected seqNum
-                    successfulReceive = 1                                                  #Comes out of while loop
+                    #update the expected sequence
+                    receiveSeqNum = 1 - seqNum
+                    #end the loop
+                    successfulReceive = 1
 
-            elif ((receiverChecksum != makeChecksum) or (seqNum != receiveSeqNum)):                    #if packet is corrupted or has unexpected sequence number, sends Acknowledgement with previous Ackowledged sequence number. Requests client to resend the data.
-                    Ack = 1 - receiveSeqNum                                                    #last acked sequence numvber
-                    Ack = b'ACK' + str(Ack).encode("UTF-8")                                 #Converting (Ack) from int to string and then encoding to bytes
-                    senderACK = Functions.makePacket(1 - receiveSeqNum,Functions.makeChecksum(Ack),Ack) #Server sends Ack with Seq_num, checksum, Ack
+        #If the packet is in fact corrupted(wrong checksum or wrong sequence number), send back the ack for the previous packet and request the data again
+            elif ((receiverChecksum != makeChecksum) or (seqNum != receiveSeqNum)):
+                #last acked sequence numvber
+                    Ack = 1 - receiveSeqNum
+                    #Convert the Ack from int to string and then encoding to bytes
+                    Ack = b'ACK' + str(Ack).encode("UTF-8")
+                    #Server sends the sequence number, the checksum, and the ackowledgement back to the client
+                    senderACK = Functions.makePacket(1 - receiveSeqNum,Functions.makeChecksum(Ack),Ack)
                     print("Server Requested to Resend the Packet")
                     print("Sequence #: {0}, Receiver Sequence: {1}, Checksum from Client: {2}, Checksum for Received File: {3}\n".format(seqNum,receiveSeqNum,makeChecksum,receiverChecksum))
-                    successfulReceive = 0                                                  #Loop continues until satisfies condition
-            serverSocket.sendto(senderACK,address)                                                 #sending the Acknowledgement packet to the client
+                    #Loop continues until satisfies condition
+                    successfulReceive = 0
+                    #sending the Acknowledgement packet to the client
+            serverSocket.sendto(senderACK,address)
 
     return imagePacket,address,receiveSeqNum
 
-#To corrupt acknowledgemnt packet, Set value from 0 - 99 in packetErrorProbability
-packetErrorProbability = 0                                                  #packetErrorProbability is the error probability and can be set from 0-99
-packetDropProbability = 0                                                   #packetDropProbability is the packet dropping probability and can be set from 0-99
+#To corrupt data packet, Set one of these value to a number from 0 - 99
+#packetErrorProbability controls the probability of a bit error within X% of packets
+packetErrorProbability = 0
+#packetDropProbability is the probability that a packet is dropped in the data transfer
+packetDropProbability = 0
 
-serverSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)                      #Socket with IPV4, UDP
-serverSocket.bind(addr)                                                             #Binding the socket
+#Create the actual socket itself
+serverSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+#Bind the socket to the address (IP and port)
+serverSocket.bind(addr)
 print("Server Ready to Receive")
-fileName = '/src/Projects/Network_Design/Network_Design_Phases/NetworkDesign/Phase4_Attempt/Our Attempt/Received_Image.jpg'
-file = open(fileName, 'wb')                                                 #opening a new file to copy the transferred image
 
-receiverSequence = 0                                                       #Server side Sequence number is initialised to zero
-loopTimes,address,receiverSequence = rdtReceive(serverSocket,bufferSize,receiverSequence) #Receiving the file size from client
-loop = struct.unpack("!I", loopTimes)[0]                                     #changing loop from byte to integer
+#open the file that is going to be written into from the data coming from the client
+fileName = 'Received_Image.jpg'
+file = open(fileName, 'wb')
+
+#Server side Sequence number is initialised to zero
+receiverSequence = 0
+ #Receiving the amount of loop times required to transmit the data
+loopTimes, address, receiverSequence = rdtReceive(serverSocket,bufferSize,receiverSequence)
+#convert the loopTime to an int
+loop = struct.unpack("!I", loopTimes)[0]
 print ("No. of Loops to send the entire file: ", loop)
-print("Writing/Receiving process starting soon")                              #Receiving File from Client
+print("Reading from client...")
 
-for i in range(0,loop):                                                     #Loop to write entire transferred image in the new file, it runs 'loop' times
-    print("Loop #:", i + 1)                                                     #Prints the Current loop. For easier way, initial print value starts from 1 (i+1, where i is 0)
-    if(i >= (loop - 2)):                                                       #This is used to make sure corruption is not made at last loop, if not client or server keeps on waiting for ack/data.
-        packetErrorProbability = 0                                                            #Error probability manually set to zero (No corruption) if true.
-        packetDropProbability = 0                                                            #Packet Dropping probability manually set to zero (No corruption) if true.
-    packet, address, receiverSequence = rdtReceive(serverSocket,bufferSize,receiverSequence,packetErrorProbability,packetDropProbability)   #Calls the function rdtReceive to receive the packet
-    file.write(packet)                                                      #If packet received successful, It writes to the file
-    i = i + 1                                                                   #Loop Iteration
-#File Received from Client at the end of Loop
+#Program runs the data transfer 'loop' number of times
+for i in range(0,loop):
+    #Prints the current loop number
+    print("Loop #:", i + 1)
+    #This loop is only here to ensure that corruption doesnt happen on the last two packets otherwise the sockets could fail or stall
+    if(i >= (loop - 2)):
+        packetErrorProbability = 0
+        packetDropProbability = 0
+        #Recieve the packet
+    packet, address, receiverSequence = rdtReceive(serverSocket,bufferSize,receiverSequence,packetErrorProbability,packetDropProbability)
+    #If the packet was good it will be written to the file
+    file.write(packet)
+    #Iterate the loop
+    i = i + 1
 
-receivedFileSize = Functions.fileSize(file)                                 #Calculating Received Image file size
 
-file.close()                                                                #closing the file
-serverSocket.close()                                                                #closing the socket
+#Calculating Received Image file size
+receivedFileSize = Functions.fileSize(file)
 
-end = time.time()                                                           #Finding the end-time
-elapsedTime = end - start                                                 #Elapsed time
+#Close the file
+file.close()
+#close the socket
+serverSocket.close()
+
+#find the time at the end of the transfer
+end = time.time()
+#Calculate the total time it took for the entire transfer
+elapsedTime = end - start
 print ("Server: File Received\nReceived File size: {0}\nTime taken in Seconds: {1}".format(receivedFileSize,elapsedTime))
 
