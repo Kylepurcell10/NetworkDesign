@@ -22,13 +22,29 @@ receiverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 # Bind the socket to the local IP address and port 
 receiverSocket.bind((IP, Port))
 
-#Function used to make the packet for the client
+#Function used to implement the rdt send
+def rdtSend(currentSequence , currentAck , data):
+
+    #Creating the checksum 
+    values = (currentACK, currentSequence, data)
+    UDPData = struct.Struct('I I 8s')
+    packedData = UDPData.pack(*values)
+    checksumVal = hashlib.md5(packedData).hexdigest().encode('utf-8')
+    #This is where it gets the UDP packet
+    sendPacket = makepacket(currentACK, currentSequence,  data, checksumVal)
+    UDPSend(sendPacket)
+
+#Function used to make the checksum
 def makepacket(currentACK, currentSequence, data, checksumVal):
-    # Build the UDP Packet
+
+    #Creating the checksum 
     values = (currentACK, currentSequence, data, checksumVal)
     packetData = struct.Struct('I I 8s 32s')
     packet = packetData.pack(*values)
     return packet
+
+def UDPSend(sendPacket):
+        receiverSocket.sendto(sendPacket, (IP, Port))
 
 #Function used to make the checksum
 def makeChecksum(ACK, SEQ, DATA):
@@ -50,50 +66,44 @@ def dataError(receivePacket):
         print('CheckSums Do Not Match')
         return True
 
+currentACK = 0
+currentSequence = 0
 dataFile = open('receive.bmp' , 'wb')
 print("Listening")
-currentAck = 0
-data, addr = receiverSocket.recvfrom(bufferSize) 
+packet, addr = receiverSocket.recvfrom(bufferSize) 
+receivedPacket = unpacker.unpack(packet)
 
 #Where the previous functions are used to send the packets back to the client
-while (data):
-
-    packet = unpacker.unpack(data)
+while True:
     print("Received from:", addr)
-    print(packet)
+    print("Data Received:" , receivedPacket[2])
 
      #This compares checksums to see if there are errors
-    if not dataError(packet):
-        dataFile.write(data)
+    if not dataError(receivedPacket):
+        dataFile.write(receivedPacket[2])
 
         # Built checksum [ACK, SEQ, DATA]
-        ACK = packet[0] + 1
-        SEQ = packet[1]
+        ACK = receivedPacket[0]
+        SEQ = receivedPacket[1]
         DATA = b''
-        checksumVal = makeChecksum(ACK, SEQ, DATA)
-
-        
-        packet = makepacket(packet[0] + 1, packet[1], b'', checksumVal)
         print('Packeting')
-
-        # Send the UDP Packet
-        receiverSocket.sendto(packet, addr)
+        rdtSend(currentSequence , currentACK , DATA)
         print('Sent')
-        try:
-            data, addr = receiverSocket.recvfrom(bufferSize)
-        except:
-            pass
+        currentACK = currentACK + 1
+        currentSequence = (currentSequence + 1) % 2
+        packet, addr = receiverSocket.recvfrom(bufferSize)
+        receivedPacket = unpacker.unpack(packet)
+        
 
     else:
-        print('Checksums Do Not Match, Packet error')
-
+        print('Packet error')
         checksumVal = makeChecksum(packet[0] + 1, (packet[1] + 1) % 2, b'')
-
         packet = makepacket(packet[0] + 1, (packet[1] + 1) % 2, b'', checksumVal)
         print('Packeting')
-
         receiverSocket.sendto(packet, addr)
         print('Sent')
+        packet, addr = receiverSocket.recvfrom(bufferSize) 
+        receivedPacket = unpacker.unpack(packet)
 
 dataFile.close()
 receiverSocket.close

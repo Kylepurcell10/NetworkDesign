@@ -17,15 +17,8 @@ bufferSize  = 1024
 # Integer, Integer, 8 letter char array, 32 letter char array
 unpacker = struct.Struct('I I 8s 32s')
 
-# Create the actual UDP socket for the server
-senderSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-print("UDP IP:", IP)
-print("UDP port:", Port)
-
 #Function used to implement the rdt send
-def rdtSend(data):
-    global currentSequence, currentACK
+def rdtSend(currentSequence , currentAck , data):
 
     #Creating the checksum 
     values = (currentACK, currentSequence, data)
@@ -33,11 +26,11 @@ def rdtSend(data):
     packedData = UDPData.pack(*values)
     checksumVal = hashlib.md5(packedData).hexdigest().encode('utf-8')
     #This is where it gets the UDP packet
-    sendPacket = makepacket(currentACK, data, checksumVal)
+    sendPacket = makepacket(currentACK, currentSequence,  data, checksumVal)
     UDPSend(sendPacket)
 
 #Function used to make the checksum
-def makepacket(currentACK, data, checksumVal):
+def makepacket(currentACK, currentSequence, data, checksumVal):
 
     #Creating the checksum 
     values = (currentACK, currentSequence, data, checksumVal)
@@ -72,36 +65,45 @@ def makeChecksum(ACK, SEQ, DATA):
 #Function to tell if the packet is acknowledged
 def isACK(receivePacket, ACKVal):
     
-    if (receivePacket[0] == ACKVal and receivePacket[1] == currentSequence):
+    if (receivePacket[0] == ACKVal):
         return True
     else:
         return False
 
-currentSequence = 0
-currentACK = 0
+# Create the actual UDP socket for the server
+senderSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+print("UDP IP:", IP)
+print("UDP port:", Port)
 
 # Open the file and begin reading it with packet size of 1024
-file = open('Cat.jpg' , 'rb')
+filename = 'Cat.bmp'
+file = open(filename , 'rb')
 # current data item being processed
 data = file.read(bufferSize)
+
+currentSequence = 0
+currentACK = 0
 
 #This will be used to send the data
 while (data):
 
     #This keeps sending data item until both sequences have been acknowledged by the server
-    rdtSend(data)
-    try:
-        packet, addr = senderSocket.recvfrom(bufferSize)
-    except:
-        pass
+    rdtSend(currentSequence, currentACK , data)
+    
+    packet, addr = senderSocket.recvfrom(bufferSize)
+    print(packet)
 
     print("Received from: ", addr) 
     receivePacket = unpacker.unpack(packet)
 
-    if(dataError(receivePacket) == False and isACK(receivePacket ,  + 1) == True):
-        currentAck = currentACK + 1
+    if(dataError(receivePacket) == False and isACK(receivePacket ,  currentACK) == True):
+        currentACK = currentACK + 1
         currentSequence  = (currentSequence + 1) % 2
         data = file.read(bufferSize)
+        print("sending more data")
+    else:
+        print("Resending packet")
 
 
 file.close()
