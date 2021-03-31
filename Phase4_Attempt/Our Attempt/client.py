@@ -71,6 +71,7 @@ P_Drop = 0                                                          #P_Drop is t
 
 sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)              #Socket with IPV4, UDP
 f = open('Trash.bmp','rb')                                          #opening a new file, this file will be transferred to the server
+#change to abolsute path
 
 fileSize = Functions.File_size(f)                                   #File size is calculated
 
@@ -79,6 +80,7 @@ loop_bytes = struct.pack("!I", loop)                                #change loop
 print("File has been Extracted \nFile size: {0} \nNo. of Loops to send the entire file: {1}".format(fileSize,loop))
 seq_nmbr = 0                                                        #Sequence Number is set to 0 initially
 seq_nmbr = Send_Receive.RdtSendPkt(sock,addr,seq_nmbr,loop_bytes)   #sending the file size to Server
+#Change to just RdtSendpkt
 
 print('Client File Transfer Starts...')
 
@@ -89,9 +91,11 @@ for i in range(0,loop):                                             #it runs 'lo
         E_Prob=0                                                    #Error probability manually set to zero (No corruption) if true.
         P_Drop=0                                                    #Packet Dropping probability manually set to zero (No corruption) if true.
     seq_nmbr = Send_Receive.RdtSendPkt(sock,addr,seq_nmbr,ImgPkt,E_Prob,P_Drop)    #calls the function rdt_send to send the packet
+    #Change to just RdtSendpkt
     i=i+1                                                           #Loop iteration
 
 f.close()                                                           #File closed
 sock.close()                                                        #Socket Closed
 
 end = time.time()                                                   #Gets the End time
+

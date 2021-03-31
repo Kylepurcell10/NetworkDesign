@@ -69,6 +69,7 @@ for i in range(0,loop):                                                     #Loo
         packetErrorProbability=0                                                            #Error probability manually set to zero (No corruption) if true.
         packetDropProbability=0                                                            #Packet Dropping probability manually set to zero (No corruption) if true.
     packet, address, receiver_sequence = Send_Receive.RdtReceivePkt(sock,buffer_size,receiver_sequence,packetErrorProbability,packetDropProbability)   #Calls the function RdtReceivePkt to receive the packet
+    #Change to just RdtSendpkt
     file.write(packet)                                                      #If packet received successful, It writes to the file
     i=i+1                                                                   #Loop Iteration
 #File Received from Client at the end of Loop
