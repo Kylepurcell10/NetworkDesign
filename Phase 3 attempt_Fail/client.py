@@ -10,7 +10,7 @@ from asyncio.tasks import sleep
 #IP Address for local communications
 IP = "127.0.0.1"
 #Local Port for client and server
-Port = 20001
+Port = 20002
 #buffer to receive information from client
 bufferSize  = 1024
 
@@ -71,10 +71,15 @@ def isACK(receivePacket, ACKVal):
         return False
 
 # Create the actual UDP socket for the server
-senderSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
+senderSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+senderSocket.bind((IP , Port))
+senderSocket.listen(1)
+conn , addr = senderSocket.accept()
+#senderSocket.accept(IP)
 print("UDP IP:", IP)
 print("UDP port:", Port)
+print("Connection Established at:" , conn)
+print("Address of server is:" , addr)
 
 # Open the file and begin reading it with packet size of 1024
 filename = 'Cat.bmp'
@@ -90,12 +95,15 @@ while (data):
 
     #This keeps sending data item until both sequences have been acknowledged by the server
     rdtSend(currentSequence, currentACK , data)
-    
+
     packet, addr = senderSocket.recvfrom(bufferSize)
+    receivedPacket = unpacker.unpack(packet)
+
     print(packet)
 
     print("Received from: ", addr) 
     receivePacket = unpacker.unpack(packet)
+    print(receivePacket)
 
     if(dataError(receivePacket) == False and isACK(receivePacket ,  currentACK) == True):
         currentACK = currentACK + 1

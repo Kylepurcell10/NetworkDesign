@@ -7,19 +7,6 @@ import base64
 import time
 from asyncio.tasks import sleep
 
-#IP Address for local communications
-IP = "127.0.0.1"
-#Local Port for client and server
-Port = 20001
-#buffer to receive information from client
-bufferSize  = 1024
-
-# Integer, Integer, 8 letter char array, 32 letter char array
-unpacker = struct.Struct('I I 8s 32s')
-
-# Create the actual UDP socket for the server
-receiverSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
-receiverSocket.bine((IP , Port))
 
 #Function used to implement the rdt send
 def rdtSend(currentSequence , currentAck , data):
@@ -64,12 +51,25 @@ def dataError(receivePacket):
     else:
         print('CheckSums Do Not Match')
         return True
+        
+#IP Address for local communications
+IP = "127.0.0.1"
+#Local Port for client and server
+Port = 20002
+#buffer to receive information from client
+bufferSize  = 1024
 
+# Integer, Integer, 8 letter char array, 32 letter char array
+unpacker = struct.Struct('I I 8s 32s')
+
+# Create the actual UDP socket for the server
+receiverSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+receiverSocket.connect((IP , Port))
 currentACK = 0
 currentSequence = 0
 dataFile = open('receive.bmp' , 'wb')
 print("Listening")
-packet, addr = receiverSocket.recvfrom(bufferSize) 
+packet, addr = receiverSocket.recvfrom(bufferSize)
 receivedPacket = unpacker.unpack(packet)
 
 #Where the previous functions are used to send the packets back to the client
