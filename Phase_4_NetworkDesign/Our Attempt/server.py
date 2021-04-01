@@ -79,7 +79,7 @@ def rdtReceive (serverSocket,bufferSize,receiveSeqNum,packetErrorProbability = 0
 
     return imagePacket,address,receiveSeqNum
 
-#To corrupt data packet, Set one of these value to a number from 0 - 99
+#To corrupt acknowledgemnt packet, Set one of these value to a number from 0 - 99
 #packetErrorProbability controls the probability of a bit error within X% of packets
 packetErrorProbability = 0
 #packetDropProbability is the probability that a packet is dropped in the data transfer
