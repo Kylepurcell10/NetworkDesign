@@ -4,71 +4,90 @@ import random
 import struct
 import time
 
-start = time.time()                    #This is used to find the start time of the program, elapsed time can be found by end time - start time
-
-IP = "127.0.0.1"                   #Localhost is the IP address of this machine
-Port = 20001                       #Port Number is assigned to 5005
-bufferSize = 1024                     #bufferSize is set to 1024. packet size is 1024 with sequence number 1 byte, checksum 2 bytes, data 1021 bytes.
-addr = (IP,Port)
-
-#'''This function is used to find the file size with the help of seek function.'''
+#This function determines the size of the file and helps determine how many packets will need to be sent
 def fileSize(file):
-    file.seek(0,2)                                                  # moves the file pointer to the EOF
-    fileSize = file.tell()                                          #gets file size
-    file.seek(0,0)                                                  # moves the file pointer the the beginning of the file
-    return fileSize                                                 #returns the file size in integer
+    # moves the pointer for the file to the end of the file 
+    file.seek(0,2)
+    #determines the file size
+    fileSize = file.tell()
+    # moves the file pointer the the beginning of the file so it can be transfered
+    file.seek(0,0)
+    return fileSize
 
 
-#'''This function is used to find how many loops the program has to run to transfer the file.'''
+#Determines how many loops(or packets) need to occur(or be sent)
 def looptimes(fileSize, bufferSize):
-    loopTimes = (fileSize / (bufferSize - 3))                        #Filesize is divided by (buffersize (1024)-3) to find the loopTimes, because 3 bytes will be the headers for the packet
-    loop = math.ceil(loopTimes)                                     #Changing loopTimes to next integer
-    return (loop)                                                   #returns the loop value in integer
+    #Filesize is divided by (buffersize (1024)-3) to find the loopTimes, because 3 bytes will be used for SEQ & Checksum
+    loopTimes = (fileSize / (bufferSize - 3))
+    #increments the loop (becaasue we are starting at loop 1 and not 0)
+    loop = math.ceil(loopTimes)
+    return (loop)
 
 
-#'''This function updates the sequence number'''
+#This function updates the sequence number
 def updateSeqNum(seqNum):
-    return 1 - seqNum                                                #returns 1-seqNum in integer
+    return 1 - seqNum
 
 
-#This function is used to find the Checksum for the data
+#Creates the checksum
 def makeChecksum(data):
-    checksumAdd=0                                             #inital checksum value is zero
-    for i in range(0, len(data), 2):                                  #Loop starts from 0 to len(data)-1, iterated +2 times.
-        firstTwoBits = data[i : (i + 2)]                               #taking 16 bits (2 bytes) value from 1024 bytes
+    #initalize to 0
+    checksumAdd=0
+    #Loop starts from 0 to len(data)-1, iterated +2 times.
+    for i in range(0, len(data), 2):
+        #taking 16 bits (2 bytes) value from 1024 bytes
+        firstTwoBits = data[i : (i + 2)]
         if len(firstTwoBits) == 1:
-            twoByteInt = struct.unpack("!B",firstTwoBits)[0]   #If len(data)=1 it has to be unpacked with standard size 1
+            #If len(data)=1 it has to be unpacked with standard size 1
+            twoByteInt = struct.unpack("!B",firstTwoBits)[0]
         elif len(firstTwoBits) == 2:
-            twoByteInt = struct.unpack("!H",firstTwoBits)[0]   #If len(data)=2 it has to be unpacked with standard size 2
-        checksumAdd = checksumAdd + twoByteInt    #checksum addition
-        while (checksumAdd >> 16) == 1:                           #loop goes on until condition becomes 'false'
-            checksumAdd = (checksumAdd & 0xffff) + (checksumAdd >>16)  #Wrapup function
-    return checksumAdd                                        #returns checksum for the data in integer
+            #If len(data)=2 it has to be unpacked with standard size 2
+            twoByteInt = struct.unpack("!H",firstTwoBits)[0]
+            #checksum addition
+        checksumAdd = checksumAdd + twoByteInt
+        #loop goes on until condition becomes 'false'
+        while (checksumAdd >> 16) == 1:
+            #Wrapup function
+            checksumAdd = (checksumAdd & 0xffff) + (checksumAdd >>16)
+            #returns checksum for the data in integer
+    return checksumAdd
 
 
-#'''This function is used to find the Bit_Error has to happen or not'''
+#This function is used to determine if a bit error is going to occur based on user input
 def errorCondition(packetErrorProbability = 0):
-    dataBitError = False                                          #dataBitError has been initialised as 'False'
-    randNum = random.random()                                    #This generates a random probability value (0.00 to 1.00)
-    if (randNum < (packetErrorProbability / 100)):                                 #converting percentage(packetErrorProbability) to probability [(0 to 100) into (0.00 to 1.00)] in order to compare with randNum
-        dataBitError = True                                       #If condition is 'True' it corrupts data
-    return dataBitError                                           #returns dataBitError as 'True' or 'False'
+    #initialize the error condition as false
+    dataBitError = False
+    #This generates a random number from 0 to 1
+    randNum = random.random()
+    #compares the packet error probability with the random number and then performs if the random number is less than the error
+    #probability
+    if (randNum < (packetErrorProbability / 100)):
+        dataBitError = True
+
+    return dataBitError
 
 
-#'''This Function is used to corrupt the data'''
+#This function corrupts the data given the input
 def dataError(data):
-    return (b'XX'+ data[2:])                                        #Replacing the first two bytes of data with alphabet character 'X' in order to corrupt, returns in byte
+    #Replaces the first two bytes of the data with the letter X to produce an error
+    return (b'XX'+ data[2:])
 
 
-#'''This Function is used to Extract Data (Sequence number,checksum, data) from packet'''
-def extractData(packet):                                            #Extracts the packet
-    dataLen = len(packet) - len("!BH")                                  #this is used to find the length of the data, (length of the sequence number (1byte) and checksum(2bytes) are fixed)
-    packetFormat = "!BH"+str(dataLen) + "s"                                  #This is the packet format. example if data length is 1021 bytes then it should be "!BH1021s".
-    return struct.unpack(packetFormat,packet)                            #returns the unpacked values of packet.
+#This function extracts the data from the packet being received
+def extractData(packet):
+    #this is used to find the length of the data, (length of the sequence number (1byte) and checksum(2bytes) are fixed)
+    dataLen = len(packet) - len("!BH")
+    #Identify the packet format
+    packetFormat = "!BH"+str(dataLen) + "s"
+    #returns the unpacked values of packet.
+    return struct.unpack(packetFormat,packet)
 
 
-#'''This Function is used to make packet (Sequence number + checksum + data -> together forms a packet)'''
+#This function assembes the actual packet with the sequence number, checksum and data
 def makePacket(seqNums,chksums,data):
-    packetFormat = "!BH" + str(len(data)) + "s"                                #This is the packet format. example if data length is 1021 bytes then it should be "!BH1021s".
-    packet = struct.pack(packetFormat,seqNums,chksums,data)                #Packs sequence number, checksum,data and forms a packet
-    return packet                                                   #returns packet in bytes
+    #Identify the packet format
+    packetFormat = "!BH" + str(len(data)) + "s"
+    #Packs sequence number, checksum,data and forms a packet
+    packet = struct.pack(packetFormat,seqNums,chksums,data)
+    #returns packet in bytes
+    return packet
