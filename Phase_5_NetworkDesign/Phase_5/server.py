@@ -63,7 +63,7 @@ packetDropProbability = 0
 sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)                      #Socket with IPV4, UDP
 sock.bind(addr)                                                             #Binding the socket
 print("Server Started")
-filename = 'Received_Image.jpg'
+filename = 'C:/src/Projects/Network_Design/Network_Design_Phases/NetworkDesign/Phase_5_NetworkDesign/Phase_5/Received_Image.jpg'
 file = open(filename, 'wb')                                        #opening a new file to copy the transferred image
 
 receiver_sequence = 0                                                       #Server side Sequence number is initialised to zero
