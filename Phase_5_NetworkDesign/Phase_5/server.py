@@ -18,7 +18,7 @@ addr = (IP,Port)
 windowSize = 5
 
 
-'''This function is the basically the Server's RDT function to receive the file.'''
+#this is the servers data receive function
 def rdtReceive (receivingSocket,bufferSize,currentSequence,packetErrorProbability=0,packetDropProbability=0,numLoops=0,windowSize = 0):
     #Indicate that the packet has not been successfully received
     packet_received = 0                                                                                 
