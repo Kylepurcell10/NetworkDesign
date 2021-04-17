@@ -13,96 +13,146 @@ bufferSize = 1024
 #address is a combination of the IPaddress and the Port number
 addr = (IP,Port)
 
-'''For the GBN Sliding window, set the Window Size value'''
-windowSize = 5                        #Set the window size for the Go-Back-N protocol. This window size is only for the client program for the sliding window. Server side window size is always 1. client window size also included in server program ONLY to avoid intentional packet corrupt/drop for the last window.
+#Set the window size for the Go-Back-N protocol for the client side
+windowSize = 5                      
 
-'''This function is the basically the client's RDT function to send the file.'''
+#Function that handles the sending of packets to the server and receiving the ackowledgement data back
+def rdtSend(file,clientSocket,addr,senderSeqNum,data,packetErrorProbability=0,packetDropProbability=0,windowSize=0,base=0,loop=0,imageBuffer=[],timeBuffer=[]):
 
-def rdtSend(file,sendingSocket,addr,senderSeqNum,data,packetErrorProbability=0,packetDropProbability=0,windowSize=0,base=0,loop=0,imageBuffer=[],timeBuffer=[]):
+    #Checks windows for empty slots
+    if (senderSeqNum < (base + windowSize)):
 
-    if (senderSeqNum < (base+windowSize)):                                                                #check for empty slots in the windows
-        while ((senderSeqNum < base+windowSize) and (senderSeqNum <= loop)):                                  #condition for GBN protocol (Sliding window)
-            if (senderSeqNum > 0):                                                                         #Initially file size is sent through sequence number 0
-                data = file.read(bufferSize-4)                                                           #print("File Read")
-            packet = Functions.makePacket(senderSeqNum,Functions.makeChecksum(data),data)                         #Packet is created with the sequence number,checksum,data
-            imageBuffer[senderSeqNum % windowSize] = packet                                              #Buffer size of window size is created and data is added to the buffer.
-            sendingSocket.sendto(packet,addr)                                                               #sends the data
+        #This is the condition for the GBN                                                         
+        while ((senderSeqNum < base+windowSize) and (senderSeqNum <= loop)): 
+
+            #This will send the file size thru the first sequence number                                
+            if (senderSeqNum > 0):                                                                         
+                data = file.read(bufferSize-4) 
+
+            #Creates the packet                                                       
+            packet = Functions.makePacket(senderSeqNum,Functions.makeChecksum(data),data)  
+
+            #Creates the window using the buffer size and adds the data
+            imageBuffer[senderSeqNum % windowSize] = packet     
+
+            #Sends the packet
+            clientSocket.sendto(packet,addr)                                                            
             print ("Packet # Sliding Window: ",senderSeqNum)
-            timeBuffer[senderSeqNum % windowSize] = time.time()                                          #Time Buffer stores the start time for each packet
-            senderSeqNum+=1                                                                                #sequence numbe is updated by 1
-        print ("Timer Started")
-    try:                                                                                               #This is used for timer. if timed-out, it comes out of try loop and goes to exception.
-        sendingSocket.settimeout(0.03)                                                                      #UDP Socket timer is added here, In this case 30 milliseconds is set as timer.If timed-out before operation, it goes to the timer exception.
-        ACKPacket,addr = sendingSocket.recvfrom(bufferSize)                                                  #Client receiving the Acknowledgement packet
-        sendingSocket.settimeout(None)                                                                      #It is equivalent to sock.setblocking(0), timer is actived only for receive function which takes care of entire operation according to the FSM.
 
-        if (Functions.errorCondition(packetDropProbability)) and (senderSeqNum< loop-windowSize):                       #If Data_bit_error is true, it starts to Drop packet intentionally ! Basically The received packet not utilised/used. Also, ack packet is not dropped for the last window.
-            while(time.time() < (timeBuffer[base % windowSize] + 0.03)):                             #As per the FSM, We need to time-out. Here we are using while loop. If current-time is less than the timer-time, it runs infinite loop with no operations. After timer-time, condition fails and loop comes out
+            #startTime is stored in timeBuffer for each packet
+            timeBuffer[senderSeqNum % windowSize] = time.time() 
+
+            #Sequence number incremented                                   
+            senderSeqNum+=1                                                                              
+        print ("Timer Started")
+    try:                           
+
+        #Set the timeout value for the socket to be 0.03 seconds                                                                  
+        clientSocket.settimeout(0.03)  
+
+        #Get the ackowledgement from the server                                                              
+        ACKPacket,addr = clientSocket.recvfrom(bufferSize)    
+        
+        #Timer is active only for receive function which takes care of the entire operation                                              
+        clientSocket.settimeout(None)                                                                     
+
+        if (Functions.errorCondition(packetDropProbability)) and (senderSeqNum< loop-windowSize):
+            #As per the FSM, We need to time-out. Here we are using while loop. If current-time is less than the timer-time, it runs infinite loop with no operations. After timer-time, condition fails and loop comes out
+            while(time.time() < (timeBuffer[base % windowSize] + 0.03)):                          
                 pass
-            print ("ERROR: ACKNOWLEDGEMENT PACKET DROPPED\n")
-            #raise OSError                                                                             #raise OSError
-        else:                                                                                          #If Data_bit_error is False,then it refers to No-packet dropping. It goes to else loop and utilises the received packet.
+            #If dataBitError is true a packet will be dropped at the rate of the variable packetDropProbability and the sequence number is greater than the window size
+            #This will force it out of the loop and discard the packet
+            print ("ERROR: Acknowledgement Packet Dropped\n")
+
+        #this statement will execute if a packet was not intentionally dropped                                                                              
+        else:
+            #get the packets respective sequence number, its checksum, and its ackowledgement                                                                                          
             packetSeqNum,senderChecksum,ACKData=Functions.extractData(ACKPacket)                         #Extracts the sequence number, checksum value, data from a packet
 
-            if (Functions.errorCondition(packetErrorProbability)) and (senderSeqNum< loop-windowSize):                   #If Data_bit_error is true, it starts to corrupt data intentionally. Also last window packets are not corrupted.
-                ACKData = Functions.dataError(ACKData)                                            #Function to corrupt data
-                print ("ERROR: ACK CORRUPTED ")
+            #If there is user predefined data bit errors, the function will modift the ackowledgement and the sequence number is greater than the window size.
+            if (Functions.errorCondition(packetErrorProbability)) and (senderSeqNum< loop-windowSize):  
+                 #function to actually corrupt the data                
+                ACKData = Functions.dataError(ACKData)                                            
+                print ("ERROR: ACK Corrupted. ")
+            
+            #Finds the checksum using the corrupted received acknowledgement
+            ACKChecksum = Functions.makeChecksum(ACKData)
+            #Decodes from byte to integer for the comparison                                                
+            ACKData = ACKData.decode("UTF-8")  
+            #Gets the integer value from ACK
+            ACKDataInt = int(ACKData[3:len(ACKData)])                                            
 
-            ACKChecksum = Functions.makeChecksum(ACKData)                                                #Finds the checksum for received acknowledgement
-            ACKData = ACKData.decode("UTF-8")                                                        #Decodes from byte to integer for the comparison
-            ACKDataInt = int(ACKData[3:len(ACKData)])                                              #Gets the integer value alone from the ACK. for example, if string 'ACK500' is the input then the output will be integer of 500
-
-            '''Comparing Acknowledgement'''
-            if (ACKDataInt >= base) and (ACKChecksum == senderChecksum ):                           #if packet is not corrupted and has expected sequence number
-                base=ACKDataInt +1                                                                   #base value is the next value to the ack value
+            #If theres nothing wrong with the packet, print to the screen the ackowledgement and then update the sequence number
+            if (ACKDataInt >= base) and (ACKChecksum == senderChecksum ):                        
+                base=ACKDataInt +1                                                                 
                 print ("ACK Verified, ACK Data: ", ACKData)
                 print ("Updated Base: ", base)
                 print ("Timer has Stopped\n")
 
-            elif (ACKChecksum != senderChecksum):                                                     #if packet is corrupted, it resends the packet
-                print ("{} is not acknowledged \n".format(ACKData))                                          #Do Nothing
+            #if packet is corrupted, it resends the packet
+            elif (ACKChecksum != senderChecksum):                                                     
+                print ("{} is not acknowledged \n".format(ACKData))                                       
 
     except (socket.timeout,OSError):
-        print ("ERROR: SOCKET TIMED OUT ")
+        print ("ERROR: Socket Timed Out.  ")
         print ("Base is still: ",base)
-        for i in range (base,senderSeqNum):                                                                #Resends the entire packet
-            timeBuffer[i % windowSize] = time.time()                                                 #Restarting the timer, updating start time for the packet
-            sendingSocket.sendto(imageBuffer[i % windowSize],addr)                                        #Sending the data
+        #Resends packet
+        for i in range (base,senderSeqNum):        
+            #This restarts the time and updates the start time for the packet                                   
+            timeBuffer[i % windowSize] = time.time()           
+            #Sends the data                                   
+            clientSocket.sendto(imageBuffer[i % windowSize],addr)             
             print ("Sending the packet: ",i)
-        print ("\n")
-    return senderSeqNum,base                                                                                   #returns updated sequence number, base value
+        print ("\n")\
+    #returns updated sequence number and base value
+    return senderSeqNum,base                                                                                   
 
 
 #To corrupt data packet, Set one of these value to a number from 0 - 99
 #packetErrorProbability controls the probability of a bit error within X% of packets
-packetErrorProbability = 20
+packetErrorProbability = 0
 #packetDropProbability is the probability that a packet is dropped in the data transfer
 packetDropProbability = 0
 
-timeBuffer=[None]*windowSize                                      #timeBuffer stores the start time for the packets
-print ("Window Size: ",windowSize)                                 #prints the window size
-imageBuffer=[None]*windowSize                                     #Stores the data in the buffer
-clientSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)              #Socket with IPV4, UDP
+#timeBuffer stores the start time for the packets
+timeBuffer=[None]*windowSize  
+#Prints the window size                                     
+print ("Window Size: ",windowSize)   
+#Stores the data in the buffer                          
+imageBuffer=[None]*windowSize   
+#Create the actual socket itself             
+clientSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)     
+
+#Open the file that is going to be transfered
 filename = 'C:/src/Projects/Network_Design/Network_Design_Phases/NetworkDesign/Phase_5_NetworkDesign/Phase_5/Trash.bmp'
-file = open(filename,'rb')                                           #opening a new file, this file will be transferred to the server
+file = open(filename,'rb')                                      
 
-fileSize = Functions.fileSize(file)                                   #File size is calculated
+#Calculate the size of the file
+fileSize = Functions.fileSize(file)                                  
 
-loop = Functions.looptimes(fileSize,bufferSize)                    #finding the loop value
-loopBytes = struct.pack("!I", loop)                                #change loop from integer to byte inorder to send data from client to server
+#determine how many times a packet will need to be sent in order for the file to be completely transfered
+loop = Functions.looptimes(fileSize,bufferSize)   
+#change loop from integer to byte in order to send data from client to server               
+loopBytes = struct.pack("!I", loop)                               
 print("File has been Extracted \nFile size: {0} \nNo. of Loops to send the entire file: {1}".format(fileSize,loop))
-senderSeqNum = 0                                                        #Sequence Number is set to 0 initially
-base=0                                                              #Here base is set to 0
+#Sequence Number is set to 0 initially
+senderSeqNum = 0    
+#Base is set to 0 initially                                              
+base = 0                                                              
 print('Client File Transfer Starts...')
 
-while (base <= loop):                                               #Loop runs until sequence number is equal to loop value. Sequence number starts from 1.
-    senderSeqNum,base = rdtSend(file,clientSocket,addr,senderSeqNum,loopBytes,packetErrorProbability,packetDropProbability,windowSize,base,loop,imageBuffer,timeBuffer) #calls the function rdt_send to send the packet
+#Loop runs until sequence number is equal to loop value. Sequence number starts from 1.
+while (base <= loop):                                              
+    #Calls the function rdtSend to send the packet
+    senderSeqNum,base = rdtSend(file,clientSocket,addr,senderSeqNum,loopBytes,packetErrorProbability,packetDropProbability,windowSize,base,loop,imageBuffer,timeBuffer) 
 
 #Close the file
 file.close()
 #Close the socket
 clientSocket.close()
 
-endTime = time.time()                                                   #Gets the End time
-elapsedTime = endTime - startTime                                          #Gets the elapsed time
+#find the time at the end of the transfer
+endTime = time.time() 
+#Calculate the total time it took for the entire transfer                                                  
+elapsedTime = endTime - startTime                                          
 print ("Client: File Sent\nFile size sent to server: {0}\nTime taken in Seconds:{1}s\n".format(fileSize,elapsedTime))
