@@ -62,15 +62,15 @@ packetDropProbability = 0
 
 serverSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)                      #Socket with IPV4, UDP
 serverSocket.bind(addr)                                                             #Binding the socket
-print("Server Started")
+print("Server Started...")
 filename = 'C:/src/Projects/Network_Design/Network_Design_Phases/NetworkDesign/Phase_5_NetworkDesign/Phase_5/Received_Image.jpg'
 file = open(filename, 'wb')                                        #opening a new file to copy the transferred image
 
 receiverSequence = 0                                                       #Server side Sequence number is initialised to zero
 loopTimes,address,receiverSequence = rdtReceive(serverSocket,bufferSize,receiverSequence) #Receiving the file size from client
 numLoops = struct.unpack("!I", loopTimes)[0]                                     #changing loop from byte to integer
-print ("No. of Loops to send the entire file: ", numLoops)
-print("write/Receiving process starting soon")                              #Receiving File from Client
+print ("Number of iterations required to send the entire file ", numLoops)
+print("Beginning Transmission...")                              #Receiving File from Client
 
 while receiverSequence <= numLoops:
     packet,address,receiverSequence = rdtReceive(serverSocket,bufferSize,receiverSequence,packetErrorProbability,packetDropProbability,numLoops,windowSize)      #Calls the function rdtReceive to receive the packet
@@ -85,5 +85,5 @@ serverSocket.close()                                                            
 
 endTime = time.time()                                                           #Finding the end-time
 elapsedTime = endTime -  startTime                                                #Elapsed time
-print ("Server: File Received\nReceived File size: {0}\nTime taken in Seconds: {1}s".format(receivedFileSize,elapsedTime))
+print ("File Received\nReceived File size: {0}\nTime taken in Seconds: {1}s".format(receivedFileSize,elapsedTime))
 
