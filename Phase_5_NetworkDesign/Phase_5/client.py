@@ -3,7 +3,7 @@ import socket
 import struct
 import time
 
-start = time.time()                    
+startTime = time.time()                    
 #Local IP to be used in communications
 IP = "127.0.0.1"
 #Using port 20001
@@ -90,20 +90,20 @@ file = open(filename,'rb')                                           #opening a 
 fileSize = Functions.fileSize(file)                                   #File size is calculated
 
 loop = Functions.looptimes(fileSize,bufferSize)                    #finding the loop value
-loop_bytes = struct.pack("!I", loop)                                #change loop from integer to byte inorder to send data from client to server
+loopBytes = struct.pack("!I", loop)                                #change loop from integer to byte inorder to send data from client to server
 print("File has been Extracted \nFile size: {0} \nNo. of Loops to send the entire file: {1}".format(fileSize,loop))
 seqNum = 0                                                        #Sequence Number is set to 0 initially
 base=0                                                              #Here base is set to 0
 print('Client File Transfer Starts...')
 
 while (base <= loop):                                               #Loop runs until sequence number is equal to loop value. Sequence number starts from 1.
-    seqNum,base = rdtSend(file,clientSocket,addr,seqNum,loop_bytes,packetErrorProbability,packetDropProbability,windowSize,base,loop,imageBuffer,timeBuffer) #calls the function rdt_send to send the packet
+    seqNum,base = rdtSend(file,clientSocket,addr,seqNum,loopBytes,packetErrorProbability,packetDropProbability,windowSize,base,loop,imageBuffer,timeBuffer) #calls the function rdt_send to send the packet
 
 #Close the file
 file.close()
 #Close the socket
 clientSocket.close()
 
-end = time.time()                                                   #Gets the End time
-elapsedTime = end - start                                          #Gets the elapsed time
+endTime = time.time()                                                   #Gets the End time
+elapsedTime = endTime - startTime                                          #Gets the elapsed time
 print ("Client: File Sent\nFile size sent to server: {0}\nTime taken in Seconds:{1}s\n".format(fileSize,elapsedTime))
