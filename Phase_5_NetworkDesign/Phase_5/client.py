@@ -3,7 +3,9 @@ import socket
 import struct
 import time
 
-startTime = time.time()                    
+#Start the timer to see how long the program takes to execute for client side
+startTime = time.time()  
+                  
 #Local IP to be used in communications
 IP = "127.0.0.1"
 #Using port 20001
