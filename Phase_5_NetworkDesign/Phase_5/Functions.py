@@ -1,7 +1,6 @@
 import math
 import random
 import struct
-from Globals import *
 
 '''This function is used to find the file size with the help of seek function.'''
 def File_size(file):
