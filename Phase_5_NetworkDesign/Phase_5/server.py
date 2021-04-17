@@ -68,7 +68,7 @@ file = open(filename, 'wb')                                        #opening a ne
 
 receiver_sequence = 0                                                       #Server side Sequence number is initialised to zero
 loopTimes,address,receiver_sequence = rdtReceive(sock,bufferSize,receiver_sequence) #Receiving the file size from client
-loop= struct.unpack("!I", loopTimes)[0]                                     #changing loop from byte to integer
+loop = struct.unpack("!I", loopTimes)[0]                                     #changing loop from byte to integer
 print ("No. of Loops to send the entire file: ", loop)
 print("write/Receiving process starting soon")                              #Receiving File from Client
 
