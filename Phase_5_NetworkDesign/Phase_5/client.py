@@ -27,7 +27,7 @@ def rdtSend(file,sendingSocket,addr,senderSeqNum,data,packetErrorProbability=0,p
             packet = Functions.makePacket(senderSeqNum,Functions.makeChecksum(data),data)                         #Packet is created with the sequence number,checksum,data
             imageBuffer[senderSeqNum % windowSize] = packet                                              #Buffer size of window size is created and data is added to the buffer.
             sendingSocket.sendto(packet,addr)                                                               #sends the data
-            print ("Packet# Sliding Window: ",senderSeqNum)
+            print ("Packet # Sliding Window: ",senderSeqNum)
             timeBuffer[senderSeqNum % windowSize] = time.time()                                          #Time Buffer stores the start time for each packet
             senderSeqNum+=1                                                                                #sequence numbe is updated by 1
         print ("Timer Started")
@@ -51,7 +51,6 @@ def rdtSend(file,sendingSocket,addr,senderSeqNum,data,packetErrorProbability=0,p
             ACKChecksum = Functions.makeChecksum(ACKData)                                                #Finds the checksum for received acknowledgement
             ACKData = ACKData.decode("UTF-8")                                                        #Decodes from byte to integer for the comparison
             ACKDataInt = int(ACKData[3:len(ACKData)])                                              #Gets the integer value alone from the ACK. for example, if string 'ACK500' is the input then the output will be integer of 500
-            #print ("Ack from Server: ",ACKDataInt)
 
             '''Comparing Acknowledgement'''
             if (ACKDataInt >= base) and (ACKChecksum == senderChecksum ):                           #if packet is not corrupted and has expected sequence number
@@ -60,12 +59,12 @@ def rdtSend(file,sendingSocket,addr,senderSeqNum,data,packetErrorProbability=0,p
                 print ("Updated Base: ", base)
                 print ("Timer has Stopped\n")
 
-            elif (ACKChecksum != senderChecksum ):                                                     #if packet is corrupted, it resends the packet
-                print ("ACK is not Verified:{} \n".format(ACKData))                                          #Do Nothing
+            elif (ACKChecksum != senderChecksum):                                                     #if packet is corrupted, it resends the packet
+                print ("{} is not acknowledged \n".format(ACKData))                                          #Do Nothing
 
     except (socket.timeout,OSError):
         print ("ERROR: SOCKET TIMED OUT ")
-        print ("Base: ",base)
+        print ("Base is still: ",base)
         for i in range (base,senderSeqNum):                                                                #Resends the entire packet
             timeBuffer[i % windowSize] = time.time()                                                 #Restarting the timer, updating start time for the packet
             sendingSocket.sendto(imageBuffer[i % windowSize],addr)                                        #Sending the data
