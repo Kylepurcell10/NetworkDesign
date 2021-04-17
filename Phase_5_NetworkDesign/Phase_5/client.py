@@ -5,7 +5,7 @@ import time
 
 #Start the timer to see how long the program takes to execute for client side
 startTime = time.time()  
-                  
+
 #Local IP to be used in communications
 IP = "127.0.0.1"
 #Using port 20001
@@ -126,7 +126,7 @@ imageBuffer=[None]*windowSize
 clientSocket = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)     
 
 #Open the file that is going to be transfered
-filename = 'C:/src/Projects/Network_Design/Network_Design_Phases/NetworkDesign/Phase_5_NetworkDesign/Phase_5/Trash.bmp'
+filename = 'C:/src/Projects/Network_Design/Network_Design_Phases/NetworkDesign/Phase_5_NetworkDesign/Phase_5/cat.bmp'
 file = open(filename,'rb')                                      
 
 #Calculate the size of the file

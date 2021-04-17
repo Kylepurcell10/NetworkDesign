@@ -21,10 +21,10 @@ windowSize = 5
 #this is the servers data receive function
 def rdtReceive (receivingSocket,bufferSize,currentSequence,packetErrorProbability=0,packetDropProbability=0,numLoops=0,windowSize = 0):
     #Indicate that the packet has not been successfully received
-    packet_received = 0                                                                                 
+    successfulReceive = 0                                                                                 
 
     #Loop until the paket has been received
-    while (not(packet_received)):
+    while (not(successfulReceive)):
 
         #Obtain the data from the client
         data, address = receivingSocket.recvfrom(bufferSize)                                                         
@@ -33,7 +33,7 @@ def rdtReceive (receivingSocket,bufferSize,currentSequence,packetErrorProbabilit
         if (Functions.errorCondition(packetDropProbability)) and (currentSequence < numLoops - windowSize):
           print ("Error: Packet Dropped\n")
           #Restarts the loop by recieving The correct data from the server
-          packet_received=0
+          successfulReceive=0
 
 #This else statement will execute in all circumstances where the packet is not dropped
         else:
@@ -63,7 +63,7 @@ def rdtReceive (receivingSocket,bufferSize,currentSequence,packetErrorProbabilit
                     #update the expected sequence
                     currentSequence = 1 + packetSequence    
                     #end the loop                                                       
-                    packet_received = 1                                                                 
+                    successfulReceive = 1                                                                 
 
 #if packet is corrupted or has unexpected sequence number, sends Acknowledgement with previous Ackowledged sequence number. Requests client to resend the data.
             elif ((ReceivedChecksum != checksum) or (packetSequence != currentSequence)):   
@@ -74,7 +74,7 @@ def rdtReceive (receivingSocket,bufferSize,currentSequence,packetErrorProbabilit
                     #Server sends the sequence number, the checksum, and the ackowledgement back to the client
                     senderAck = Functions.makePacket(currentSequence,Functions.makeChecksum(Ack),Ack)
                     #Loop continues until satisfies condition                 
-                    packet_received = 0                       
+                    successfulReceive = 0                       
                     #sending the Acknowledgement packet to the client                                          
             receivingSocket.sendto(senderAck,address)                                                               
 

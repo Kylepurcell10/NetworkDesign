@@ -1,5 +1,5 @@
 Kyle Luong
--Phase 4
+-Phase 5
 -Kyle Purcell and Edward Guenette
 
 Environment
@@ -19,19 +19,19 @@ Instructions
 -Finally, the server should acknowledge that the file has been received.
 -The image received by the client should be the same as the one sent to the server.
 
-For 1 - no loss/error:
--Lines 84 and 86 need to be 0 on "server.py".
--Lines 104 and 106 need to be 0 on "client.py".
+For option 1 - no loss/error:
+-Lines 85 and 87 need to be 0 on "server.py".
+-Lines 115 and 117 need to be 0 on "client.py".
 
-For 2 - ACK bit error:
--Change lines 84 to whatever percent error you would like on "server.py".
+For option 2 - ACK bit error:
+-Change lines 85 to whatever percent error you would like on "server.py".
 
-For 3 - Data bit error:
--Change lines 104 to whatever percent error you would like on "client.py".
+For option 3 - Data bit error:
+-Change lines 115 to whatever percent error you would like on "client.py".
 
-For 4 - ACK packet loss:
--Change lines 86 to whatever percent error you would like on "server.py".
+For option 4 - ACK packet loss:
+-Change lines 87 to whatever percent error you would like on "server.py".
 
-For 5 - Data packet loss:
--Change lines 106 to whatever percent error you would like on "client.py".
+For option 5 - Data packet loss:
+-Change lines 117 to whatever percent error you would like on "client.py".
 
